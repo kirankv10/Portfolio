@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kiran | Embedded Firmware Engineer</title>
+<meta name="description" content="Kiran, embedded firmware engineer: C firmware on dual-core STM32 with an RTOS, I2C, SPI, USB, Ethernet, and Linux kernel drivers.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0E1412; --surface: #151D1A; --ink: #ECEEF2; --muted: #9AA1AD; --line: rgba(236,238,242,.10);
+  --a1: #F2B33D; --a2: #4ADE9B; --on: #0B0D10;
+  --display: "Sora", "DejaVu Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", "DejaVu Sans Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark light;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #F1F4F2; --surface: #FFFFFF; --ink: #15171C; --muted: #5E6573; --line: rgba(21,23,28,.10); --a1: #B87500; --a2: #11885A; --on: #FFFFFF; } }
+:root[data-theme="light"] { --bg: #F1F4F2; --surface: #FFFFFF; --ink: #15171C; --muted: #5E6573; --line: rgba(21,23,28,.10); --a1: #B87500; --a2: #11885A; --on: #FFFFFF; }
+:root[data-theme="dark"] { --bg: #0E1412; --surface: #151D1A; --ink: #ECEEF2; --muted: #9AA1AD; --line: rgba(236,238,242,.10); --a1: #F2B33D; --a2: #4ADE9B; --on: #0B0D10; }
+:root { box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+*, *::before, *::after { box-sizing: inherit; }
+html { scroll-behavior: smooth; scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 70px); background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--display); font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--a1); outline-offset: 3px; border-radius: 4px; }
+svg { max-width: 100%; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 28px; }
+#bgfx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.glow { position: fixed; width: 520px; height: 520px; border-radius: 50%; pointer-events: none; z-index: 0; background: radial-gradient(circle, color-mix(in srgb, var(--a1) 16%, transparent), transparent 65%); transform: translate(-50%, -50%); left: 50%; top: 30%; transition: left .25s ease-out, top .25s ease-out; }
+.page { position: relative; z-index: 1; }
+
+/* Nav */
+nav.top { position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; z-index: 20; transition: background .3s, border-color .3s; border-bottom: 1px solid transparent; }
+nav.top.solid { background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(12px); border-color: var(--line); }
+nav.top .wrap { display: flex; align-items: center; gap: 26px; height: 66px; }
+.logo { font-weight: 800; font-size: 20px; text-decoration: none; margin-right: auto; letter-spacing: -.02em; }
+.logo span { color: var(--a1); }
+nav.top a.l { text-decoration: none; color: var(--muted); font-size: 15px; position: relative; }
+nav.top a.l::after { content: ""; position: absolute; left: 0; right: 100%; bottom: -4px; height: 2px; background: var(--a1); transition: right .25s; }
+nav.top a.l:hover { color: var(--ink); } nav.top a.l:hover::after, nav.top a.l.on::after { right: 0; } nav.top a.l.on { color: var(--ink); }
+.tbtn { border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 999px; padding: 6px 14px; font: 500 13px var(--display); cursor: pointer; }
+.progress { position: fixed; top: env(safe-area-inset-top, 0px); left: 0; height: 2px; width: 0; background: linear-gradient(90deg, var(--a1), var(--a2)); z-index: 25; }
+
+/* Hero */
+.hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 120px 0 80px; }
+.hello { font-family: var(--mono); color: var(--a1); font-size: 15px; margin: 0 0 18px; opacity: 0; animation: up .7s .1s forwards; }
+.hero h1 { font-size: clamp(64px, 12vw, 150px); line-height: .92; letter-spacing: -.05em; font-weight: 800; margin: 0 0 22px; }
+.hero h1 .ch { display: inline-block; opacity: 0; transform: translateY(60%) rotate(6deg); animation: chIn .7s cubic-bezier(.2,.8,.2,1) forwards; }
+@keyframes chIn { to { opacity: 1; transform: none; } }
+.hero h1 .dot { color: var(--a1); }
+.rolebox { font-size: clamp(22px, 3.2vw, 36px); font-weight: 600; letter-spacing: -.02em; min-height: 1.4em; margin: 0 0 22px; opacity: 0; animation: up .7s .9s forwards; }
+.rolebox .pre { color: var(--muted); font-weight: 400; }
+.rolebox .rw { background: linear-gradient(90deg, var(--a1), var(--a2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.rolebox .caret { display: inline-block; width: 3px; height: .95em; background: var(--a1); vertical-align: -.1em; margin-left: 4px; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.hero .lede { color: var(--muted); max-width: 36em; font-size: 18.5px; margin: 0 0 34px; opacity: 0; animation: up .7s 1.1s forwards; }
+.cta { display: flex; gap: 14px; flex-wrap: wrap; opacity: 0; animation: up .7s 1.3s forwards; }
+@keyframes up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.btn { position: relative; display: inline-flex; align-items: center; gap: 10px; height: 50px; padding: 0 26px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 15.5px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); overflow: hidden; transition: transform .2s, border-color .2s; }
+.btn:hover { transform: translateY(-2px); border-color: var(--a1); }
+.btn.primary { background: linear-gradient(90deg, var(--a1), var(--a2)); color: var(--on); border: 0; }
+.btn.primary::after { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent); transform: skewX(-20deg); animation: shine 3.2s 2s infinite; }
+@keyframes shine { 0% { left: -60%; } 40%, 100% { left: 130%; } }
+.scrollcue { margin-top: 70px; display: flex; align-items: center; gap: 12px; color: var(--muted); font-family: var(--mono); font-size: 12.5px; opacity: 0; animation: up .7s 1.6s forwards; }
+.mouse { width: 22px; height: 34px; border: 2px solid var(--muted); border-radius: 12px; position: relative; }
+.mouse::after { content: ""; position: absolute; left: 50%; top: 6px; width: 4px; height: 7px; margin-left: -2px; border-radius: 2px; background: var(--a1); animation: wheel 1.6s infinite; }
+@keyframes wheel { 0% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(12px); } }
+
+/* Sections */
+section { padding: 110px 0; }
+.label { font-family: var(--mono); color: var(--a1); font-size: 14px; margin: 0 0 12px; }
+h2 { font-size: clamp(36px, 5vw, 60px); line-height: 1.02; letter-spacing: -.035em; font-weight: 800; margin: 0 0 40px; max-width: 18ch; }
+.reveal { opacity: 0; transform: translateY(34px); transition: opacity .8s cubic-bezier(.2,.8,.2,1), transform .8s cubic-bezier(.2,.8,.2,1); }
+.reveal.in { opacity: 1; transform: none; }
+.d1 { transition-delay: .1s; } .d2 { transition-delay: .2s; } .d3 { transition-delay: .3s; }
+
+.about { display: grid; grid-template-columns: 1.4fr 1fr; gap: 50px; align-items: start; }
+.about p { font-size: 19px; color: var(--muted); margin: 0 0 18px; }
+.about p b { color: var(--ink); font-weight: 600; }
+.stats { display: grid; gap: 14px; }
+.stat { border: 1px solid var(--line); background: var(--surface); border-radius: 20px; padding: 22px 24px; }
+.stat b { display: block; font-size: 44px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; background: linear-gradient(90deg, var(--a1), var(--a2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.stat span { color: var(--muted); font-size: 15px; }
+
+/* Timeline */
+.tl { position: relative; padding-left: 40px; }
+.tl::before { content: ""; position: absolute; left: 11px; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
+.tl .fill { position: absolute; left: 11px; top: 6px; width: 2px; height: 0; background: linear-gradient(var(--a1), var(--a2)); }
+.job { position: relative; margin-bottom: 44px; }
+.job:last-child { margin-bottom: 0; }
+.job::before { content: ""; position: absolute; left: -36px; top: 8px; width: 16px; height: 16px; border-radius: 50%; background: var(--bg); border: 2px solid var(--a1); box-shadow: 0 0 0 5px color-mix(in srgb, var(--a1) 15%, transparent); }
+.job h3 { font-size: 24px; letter-spacing: -.02em; margin: 0 0 2px; }
+.job .co { color: var(--a1); font-weight: 500; margin: 0 0 14px; }
+.job ul { margin: 0; padding-left: 1.1em; color: var(--muted); }
+.job li { margin-bottom: 8px; max-width: 70ch; }
+.job li::marker { color: var(--a2); }
+
+/* Projects */
+.projects { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.proj { position: relative; border: 1px solid var(--line); background: var(--surface); border-radius: 24px; padding: 0; overflow: hidden; transform-style: preserve-3d; transition: transform .25s ease-out, border-color .25s; will-change: transform; }
+.proj:hover { border-color: color-mix(in srgb, var(--a1) 60%, transparent); }
+.proj::before { content: ""; position: absolute; inset: 0; background: radial-gradient(400px circle at var(--mx, 50%) var(--my, 0%), color-mix(in srgb, var(--a1) 14%, transparent), transparent 60%); opacity: 0; transition: opacity .3s; pointer-events: none; }
+.proj:hover::before { opacity: 1; }
+.art { height: 190px; border-bottom: 1px solid var(--line); display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 55%, var(--surface)); overflow: hidden; }
+.art svg { width: 100%; height: 100%; }
+.pbody { padding: 24px 26px 26px; }
+.pbody h3 { font-size: 22px; letter-spacing: -.02em; margin: 0 0 8px; }
+.pbody p { margin: 0 0 16px; color: var(--muted); font-size: 15.5px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tags span { font-family: var(--mono); font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.where { display: block; font-family: var(--mono); font-size: 12.5px; color: var(--a2); margin-bottom: 8px; }
+.badge { display: inline-block; margin-bottom: 10px; font-size: 12.5px; font-weight: 600; color: var(--a1); border: 1.5px solid var(--a1); border-radius: 999px; padding: 1px 10px; }
+
+/* Art animations */
+.s-a1 { stroke: var(--a1); } .s-a2 { stroke: var(--a2); } .s-mu { stroke: var(--muted); } .f-a1 { fill: var(--a1); } .f-a2 { fill: var(--a2); } .f-mu { fill: var(--muted); } .f-su { fill: var(--surface); } .f-bg { fill: var(--bg); }
+.dash { stroke-dasharray: 8 10; animation: dash 1.6s linear infinite; } @keyframes dash { to { stroke-dashoffset: -36; } }
+.pulse { animation: pulse 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; } @keyframes pulse { 50% { opacity: .25; transform: scale(.85); } }
+.blinkf { animation: blink 1.2s steps(1) infinite; }
+.spin { animation: spin 6s linear infinite; transform-box: fill-box; transform-origin: center; } @keyframes spin { to { transform: rotate(360deg); } }
+.drawp { stroke-dasharray: 600; stroke-dashoffset: 600; animation: drawp 3.4s ease-in-out infinite; } @keyframes drawp { 0% { stroke-dashoffset: 600; } 55%, 80% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -600; } }
+.scrollx { animation: scrollx 4s linear infinite; } @keyframes scrollx { to { transform: translateX(-200px); } }
+.float { animation: float 3s ease-in-out infinite; transform-box: fill-box; } @keyframes float { 50% { transform: translateY(-8px); } }
+.typeline { animation: typel 4s steps(1) infinite; } 
+.arcp { animation: arcp 1.6s ease-out infinite; opacity: .2; } @keyframes arcp { 30% { opacity: 1; } }
+
+/* Skills marquee */
+.marquee { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); margin-bottom: 14px; }
+.track { display: flex; gap: 12px; width: max-content; animation: mq 34s linear infinite; }
+.marquee.rev .track { animation-direction: reverse; animation-duration: 40s; }
+.marquee:hover .track { animation-play-state: paused; }
+@keyframes mq { to { transform: translateX(-50%); } }
+.track span { white-space: nowrap; font-size: 17px; font-weight: 600; padding: 12px 22px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); }
+.track span i { font-style: normal; color: var(--a1); margin-right: 8px; }
+
+.edu { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.ecard { border: 1px solid var(--line); background: var(--surface); border-radius: 20px; padding: 24px; transition: transform .25s, border-color .25s; }
+.ecard:hover { transform: translateY(-4px); border-color: var(--a1); }
+.ecard h3 { font-size: 18px; margin: 0 0 6px; letter-spacing: -.01em; }
+.ecard p { margin: 0; color: var(--muted); font-size: 15px; } .ecard p b { color: var(--a1); font-weight: 600; }
+
+.contact { text-align: center; padding: 140px 0 120px; }
+.contact h2 { margin: 0 auto 20px; font-size: clamp(44px, 7.5vw, 100px); }
+.contact h2 .wave { display: inline-block; animation: wave 2.4s ease-in-out infinite; transform-origin: 70% 70%; }
+@keyframes wave { 0%, 60%, 100% { transform: rotate(0); } 10%, 30% { transform: rotate(14deg); } 20% { transform: rotate(-8deg); } }
+.contact p { color: var(--muted); max-width: 34em; margin: 0 auto 34px; font-size: 18px; }
+.contact .cta { justify-content: center; opacity: 1; animation: none; }
+footer { border-top: 1px solid var(--line); padding: 26px 0 36px; color: var(--muted); font-size: 13.5px; }
+footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+@media (max-width: 860px) {
+  nav.top a.l { display: none; }
+  .about, .projects, .edu { grid-template-columns: 1fr; }
+  section { padding: 80px 0; }
+  .glow { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .hello, .rolebox, .hero .lede, .cta, .scrollcue, .hero h1 .ch, .reveal { opacity: 1 !important; transform: none !important; }
+  html { scroll-behavior: auto; }
+}
+/* Toggle switches + collapsible sections */
+.sw { display: inline-flex; align-items: center; gap: 12px; background: transparent; border: 0; padding: 6px; cursor: pointer; color: var(--muted); font-family: var(--mono); flex-shrink: 0; }
+.sw-track { position: relative; width: 74px; height: 34px; border-radius: 8px; background: linear-gradient(#1A1D21, #2A2E33); box-shadow: inset 0 2px 6px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.08), 0 2px 0 rgba(255,255,255,.04); }
+.sw-track::before { content: ""; position: absolute; left: 8px; right: 8px; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; background: #0A0B0D; }
+.sw-knob { position: absolute; top: 3px; left: 3px; width: 32px; height: 28px; border-radius: 6px; background: linear-gradient(180deg, #F2F4F6, #A9B0B7); box-shadow: 0 3px 6px rgba(0,0,0,.45), inset 0 1px 0 #fff;
+  transition: left .28s cubic-bezier(.5,1.6,.4,1), background .2s; }
+.sw-knob::before { content: ""; position: absolute; left: 10px; right: 10px; top: 8px; bottom: 8px; background: repeating-linear-gradient(90deg, rgba(0,0,0,.28) 0 2px, transparent 2px 5px); border-radius: 1px; }
+.sw-led { width: 10px; height: 10px; border-radius: 50%; background: #3A2A28; box-shadow: inset 0 1px 2px rgba(0,0,0,.5); transition: background .2s, box-shadow .2s; }
+.sw-txt { display: grid; font-size: 12px; line-height: 1.2; text-align: left; }
+.sw-txt b { font-weight: 500; transition: color .2s, opacity .2s; opacity: .45; } .sw-txt .t-off { opacity: 1; }
+.sw[aria-checked="true"] .sw-knob { left: 39px; }
+.sw[aria-checked="true"] .sw-led { background: var(--a2); box-shadow: 0 0 12px 2px var(--a2); }
+.sw[aria-checked="true"] .t-on { opacity: 1; color: var(--a2); } .sw[aria-checked="true"] .t-off { opacity: .45; }
+.sw:hover .sw-track { box-shadow: inset 0 2px 6px rgba(0,0,0,.6), 0 0 0 1px var(--a1); }
+.sechead { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.collapsible .sechead h2 { margin: 0; cursor: pointer; }
+.collapsible section[data-collapse] { padding: 46px 0; border-top: 1px solid var(--line); }
+.collapsible section[data-collapse] .label { margin-bottom: 6px; }
+.sec-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .7s cubic-bezier(.2,.8,.2,1); }
+.sec-body > .inner { overflow: hidden; min-height: 0; opacity: 0; transform: translateY(-10px); transition: opacity .5s .15s, transform .5s .15s; }
+section.open .sec-body { grid-template-rows: 1fr; }
+section.open .sec-body > .inner { opacity: 1; transform: none; padding-top: 40px; }
+.collapsible section[data-collapse].open { padding-bottom: 80px; }
+.collapsible #skills .sec-body > .inner { padding-top: 0; }
+.collapsible section.open#skills .sec-body > .inner { padding-top: 36px; }
+@media (max-width: 600px) { .sw-txt { display: none; } }
+/* Gated: everything appears only after power on */
+.gated main > section, .gated footer, .gated nav.top a.l { display: none; }
+.gated.powered main > section, .gated.powered footer { display: block; animation: popIn .8s cubic-bezier(.2,.9,.25,1.15) both; }
+.gated.powered nav.top a.l { display: inline; animation: up .5s both; }
+.gated.powered main > section:nth-of-type(2) { animation-delay: .12s; } .gated.powered main > section:nth-of-type(3) { animation-delay: .24s; }
+.gated.powered main > section:nth-of-type(4) { animation-delay: .36s; } .gated.powered main > section:nth-of-type(5) { animation-delay: .48s; } .gated.powered main > section:nth-of-type(6) { animation-delay: .6s; }
+@keyframes popIn { from { opacity: 0; transform: translateY(50px) scale(.96); } to { opacity: 1; transform: none; } }
+.gated .hero3d { min-height: calc(100vh - 20px); }
+.downcue { display: none; }
+.gated.powered .downcue { display: flex; justify-content: center; margin-top: 30px; animation: up .7s 1.2s both; }
+.downcue a { display: inline-flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 13px; color: var(--a1); text-decoration: none; }
+.downcue a i { display: inline-block; width: 10px; height: 10px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); animation: bob 1.4s ease-in-out infinite; }
+@keyframes bob { 50% { transform: translateY(5px) rotate(45deg); } }
+@media (max-width: 860px) { .gated.powered nav.top a.l { display: none; } }
+@media (prefers-reduced-motion: reduce) { .gated.powered main > section, .gated.powered footer { animation: none; } }
+
+.hero3d { padding-top: 100px; }
+.h3grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 30px; align-items: center; }
+.hero3d h1 { font-size: clamp(56px, 8vw, 116px); }
+.h3text { position: relative; }
+.hero3d .hello, .hero3d .rolebox, .hero3d .lede, .hero3d .cta { animation: none; opacity: 0; }
+.hero3d h1 { opacity: 0; }
+.hero3d.ready h1 { opacity: 1; }
+.hero3d.ready .hello { animation: up .7s .05s forwards; } .hero3d.ready .rolebox { animation: up .7s .7s forwards; } .hero3d.ready .lede { animation: up .7s .9s forwards; } .hero3d.ready .cta { animation: up .7s 1.1s forwards; }
+.pprompt { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); transition: opacity .5s, transform .5s; }
+.hero3d.ready .pprompt { opacity: 0; transform: translateY(-60%); pointer-events: none; }
+.pprompt .ptitle { font-size: clamp(34px, 4.4vw, 56px); font-weight: 800; letter-spacing: -.03em; line-height: 1.05; margin: 0 0 12px; }
+.pprompt .psub { color: var(--muted); font-size: 18px; margin: 0; }
+.powerbar { display: flex; align-items: center; gap: 14px; justify-content: center; margin-top: 4px; position: relative; z-index: 2; }
+.sw.big .sw-track { width: 96px; height: 44px; border-radius: 10px; }
+.sw.big .sw-knob { width: 44px; height: 36px; top: 4px; left: 4px; }
+.sw.big[aria-checked="true"] .sw-knob { left: 48px; }
+.sw.big .sw-led { width: 13px; height: 13px; }
+.sw.big .sw-txt { font-size: 13px; }
+.phint { font-family: var(--mono); font-size: 12.5px; color: var(--a1); }
+.hero3d:not(.pwr-on) .sw.big .sw-track { animation: nudge 2.2s ease-in-out 1.6s infinite; }
+@keyframes nudge { 0%, 70%, 100% { box-shadow: inset 0 2px 6px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.08); } 80% { box-shadow: inset 0 2px 6px rgba(0,0,0,.6), 0 0 0 3px var(--a1), 0 0 22px var(--a1); } }
+.pcb3d { cursor: pointer; }
+.h3stage { perspective: 1500px; perspective-origin: 50% 30%; height: min(560px, 64vw); display: grid; place-items: center; }
+.tilt { position: relative; width: 100%; transform-style: preserve-3d; transform: rotateX(34deg) rotateZ(-12deg); }
+.pcb3d { position: relative; width: 100%; aspect-ratio: 8 / 5; transform-style: preserve-3d; transform: translateZ(-500px) rotateX(70deg) rotateZ(-40deg) scale(.6); opacity: 0;
+  transition: transform 1.5s cubic-bezier(.2,.8,.2,1), opacity .5s, filter .6s; filter: brightness(.38) saturate(.6); }
+.on .pcb3d { transform: none; opacity: 1; }
+.pwr-on .pcb3d { filter: none; }
+.pcb3d .face { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: 2.2%; }
+.pcb3d::before { content: ""; position: absolute; left: 1.5%; right: 1.5%; top: 100%; height: 14px; background: linear-gradient(#0E3527, #0A281D); transform-origin: top; transform: rotateX(-90deg); }
+.pcb3d::after { content: ""; position: absolute; top: 2%; bottom: 2%; left: 100%; width: 14px; background: #0C2E22; transform-origin: left; transform: rotateY(90deg); }
+.shadow3d { position: absolute; left: 6%; right: 6%; top: 10%; bottom: -6%; background: radial-gradient(closest-side, rgba(0,0,0,.55), transparent); filter: blur(18px); transform: translateZ(-60px); opacity: 0; transition: opacity 1s .6s; }
+.on .shadow3d { opacity: 1; }
+/* raised 3D blocks */
+.b3 { position: absolute; left: var(--x); top: var(--y); width: var(--w); height: var(--h); transform-style: preserve-3d; transform: translateZ(var(--z)); border-radius: 4px; }
+.b3::before { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: var(--z); background: var(--sd, #0A0B0D); transform-origin: top; transform: rotateX(-90deg); }
+.b3::after { content: ""; position: absolute; top: 0; bottom: 0; left: 100%; width: var(--z); background: var(--sr, #121417); transform-origin: left; transform: rotateY(90deg); }
+.chip { background: linear-gradient(135deg, #2C3036, #15171A); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.mcu .ct { font-family: var(--mono); color: #D7DDE2; font-size: clamp(10px, 1.6vw, 18px); font-weight: 500; letter-spacing: .04em; opacity: .25; transition: opacity .6s; }
+.mcu .cs { font-family: var(--mono); color: #D7DDE2; font-size: clamp(6px, .8vw, 9px); opacity: .2; transition: opacity .6s; }
+.mcu-on .mcu .ct, .mcu-on .mcu .cs { opacity: .9; }
+.mcu .cores { display: flex; gap: 6px; margin-top: 8%; } .mcu .cores b { width: clamp(10px, 1.8vw, 20px); height: clamp(4px, .6vw, 7px); border-radius: 2px; background: #1F3A30; }
+.mcu-on .mcu .cores b { background: #3CCB8C; box-shadow: 0 0 10px #3CCB8C; animation: corebusy .5s steps(2) infinite; }
+.mcu-on .mcu .cores b + b { animation-duration: .7s; }
+@keyframes corebusy { 50% { opacity: .35; } }
+.metal { background: linear-gradient(180deg, #E8EBEE, #9DA4AB); --sd: #7D848B; --sr: #8C939A; }
+.metal .rj { position: absolute; left: 12%; right: 12%; top: 18%; bottom: 14%; background: #121417; border-radius: 3px; }
+.rjled { position: absolute; top: 5%; width: 10%; height: 9%; border-radius: 2px; background: #3a3f45; }
+.rjled.l1 { left: 8%; } .rjled.l2 { right: 8%; }
+.eth-on .rjled.l1 { background: #3CCB8C; box-shadow: 0 0 8px #3CCB8C; animation: blink 0.8s steps(1) infinite; }
+.eth-on .rjled.l2 { background: #F2B33D; box-shadow: 0 0 8px #F2B33D; animation: blink 1.3s steps(1) infinite; }
+.hdr { background: #121417 radial-gradient(circle at 50% 50%, #E2C46E 30%, transparent 34%) 0 0 / 12.5% 50%; }
+.conn { background: #EEEEEA; --sd: #B9BAB4; --sr: #CFD0CA; }
+.conn::marker { display: none; }
+.oled { background: #0A0B0D; padding: 5%; }
+.scr { position: relative; width: 100%; height: 100%; background: #04110C; border-radius: 3px; overflow: hidden; font-family: "VT323", var(--mono); color: #7CFFC4; text-shadow: 0 0 6px rgba(124,255,196,.75); line-height: 1.12; padding: 6% 7%; white-space: nowrap; container-type: inline-size; }
+.scr > div { font-size: 9.5cqw; }
+.scr::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.25) 0 1px, transparent 1px 3px); pointer-events: none; }
+.oled-on .scr { animation: crt .5s ease-out; }
+@keyframes crt { 0% { filter: brightness(3); transform: scaleY(.02); } 60% { transform: scaleY(1); } 100% { filter: none; } }
+.scr > .big2 { font-size: 18cqw; line-height: 1; letter-spacing: .05em; color: #B8FFE0; text-shadow: 0 0 10px rgba(124,255,196,.95), 0 0 24px rgba(124,255,196,.5); margin-top: .12em; }
+.scr > .big { font-size: 27cqw; margin-top: .1em; line-height: 1; letter-spacing: .06em; color: #B8FFE0; text-shadow: 0 0 10px rgba(124,255,196,.95), 0 0 24px rgba(124,255,196,.5); }
+.scr .cur { display: inline-block; width: .55em; height: .9em; background: #7CFFC4; vertical-align: -.1em; animation: blink .9s steps(1) infinite; }
+.cap { position: absolute; left: var(--x); top: var(--y); width: 5%; aspect-ratio: 1; border-radius: 50%; transform: translateZ(20px); background: radial-gradient(circle at 40% 35%, #F0F2F4, #8E959C 70%); box-shadow: 0 0 0 1px rgba(0,0,0,.25), 3px 6px 0 #6E757C; }
+.led3 { position: absolute; left: var(--x); top: var(--y); width: 2.4%; height: 2.4%; border-radius: 2px; transform: translateZ(4px); background: #22362E; transition: background .2s, box-shadow .2s; }
+.pwr-on .led3.pwr { background: #3CCB8C; box-shadow: 0 0 14px 3px #3CCB8C; }
+.mcu-on .led3.run { background: #3CCB8C; box-shadow: 0 0 14px 3px #3CCB8C; animation: blink 1s steps(1) infinite; }
+.led3.blk.fire { background: #FF6B5B; box-shadow: 0 0 16px 4px #FF6B5B; }
+/* traces */
+#tr3 path { stroke: #C9A24A; stroke-width: 2.6; stroke-dasharray: 1; stroke-dashoffset: 1; opacity: .9; }
+.tr-on #tr3 path.base { transition: stroke-dashoffset 1.2s ease-out; stroke-dashoffset: 0; }
+#tr3 path.flow { stroke: #FFE3A0; stroke-width: 3.2; stroke-dasharray: .05 .95; stroke-dashoffset: 1; opacity: 0; filter: drop-shadow(0 0 3px #FFD27A); }
+.tr-on #tr3 path.flow { opacity: 1; animation: flow3 2.2s linear infinite; }
+@keyframes flow3 { to { stroke-dashoffset: 0; } }
+@media (max-width: 860px) {
+  .h3grid { grid-template-columns: 1fr; gap: 0; }
+  .h3stage { height: 66vw; perspective: 900px; }
+  .tilt { width: 82%; }
+  .hero3d { padding-top: 76px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pcb3d { transform: none !important; opacity: 1 !important; filter: none !important; }
+  #tr3 path.base { stroke-dashoffset: 0 !important; }
+}
+
+</style>
+</head>
+<body class="gated">
+<canvas id="bgfx" aria-hidden="true"></canvas>
+<div class="glow" id="glow" aria-hidden="true"></div>
+<div class="progress" id="progress" aria-hidden="true"></div>
+<div class="page">
+<nav class="top" id="nav"><div class="wrap">
+  <a class="logo" href="#top">Kiran<span>.</span></a>
+  <a class="l" href="#about">About</a><a class="l" href="#experience">Experience</a><a class="l" href="#projects">Projects</a><a class="l" href="#skills">Skills</a><a class="l" href="#contact">Contact</a>
+  <button class="tbtn" id="themeBtn">Theme</button>
+</div></nav>
+
+<main id="top">
+  <header class="wrap hero hero3d" id="hero3d">
+    <div class="h3grid">
+      <div class="h3stage" id="stage">
+        <div class="tilt" id="tilt" aria-hidden="true">
+          <div class="pcb3d" id="pcb3d">
+            <svg class="face" viewBox="0 0 800 500">
+              <defs>
+                <pattern id="pour3" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="10" stroke="#1E6249" stroke-width="2"/></pattern>
+              </defs>
+              <rect x="0" y="0" width="800" height="500" rx="18" fill="#164C38"/>
+              <rect x="12" y="12" width="776" height="476" rx="12" fill="url(#pour3)" opacity=".6"/>
+              <rect x="1" y="1" width="798" height="498" rx="18" fill="none" stroke="#C9A24A" stroke-width="2" opacity=".55"/>
+              <g fill="#C9A24A"><circle cx="30" cy="30" r="12"/><circle cx="770" cy="30" r="12"/><circle cx="30" cy="470" r="12"/><circle cx="770" cy="470" r="12"/></g>
+              <g fill="#0B2219"><circle cx="30" cy="30" r="6"/><circle cx="770" cy="30" r="6"/><circle cx="30" cy="470" r="6"/><circle cx="770" cy="470" r="6"/></g>
+              <g id="tr3" fill="none" stroke-linecap="round" stroke-linejoin="round"></g>
+              <g id="mcupins" fill="#C9CED3"></g>
+              <g font-family="IBM Plex Mono, monospace" font-size="11" fill="#E8F1EC" opacity=".85">
+                <text x="40" y="378">J4 PWR</text><text x="30" y="44" dx="28">J1 ETH</text><text x="266" y="24">J2 I2C / SPI</text>
+                <text x="330" y="164">U1</text><text x="520" y="50">DSP1</text><text x="728" y="222">HB1-3</text><text x="372" y="452">U3 FLASH</text>
+                <text x="172" y="476">PWR  RUN  BLK</text><text x="560" y="480" opacity=".7">KR-CTRL  REV 2026</text>
+              </g>
+            </svg>
+            <div class="b3 metal" style="--x:4%;--y:10%;--w:17.5%;--h:24%;--z:26px"><i class="rj"></i><b class="rjled l1"></b><b class="rjled l2"></b></div>
+            <div class="b3 hdr" style="--x:33%;--y:6%;--w:22%;--h:8%;--z:12px"></div>
+            <div class="b3 chip mcu" style="--x:41.25%;--y:34%;--w:17.5%;--h:28%;--z:14px"><span class="ct">STM32</span><span class="cs">DUAL-CORE</span><span class="cores"><b></b><b></b></span></div>
+            <div class="b3 oled" style="--x:65%;--y:12%;--w:28%;--h:26%;--z:10px"><div class="scr" id="scr"></div></div>
+            <div class="b3 conn" style="--x:90%;--y:46%;--w:7%;--h:12%;--z:14px"></div>
+            <div class="b3 conn" style="--x:90%;--y:62%;--w:7%;--h:12%;--z:14px"></div>
+            <div class="b3 conn" style="--x:90%;--y:78%;--w:7%;--h:12%;--z:14px"></div>
+            <div class="b3 chip" style="--x:45%;--y:74%;--w:12.5%;--h:12%;--z:8px"></div>
+            <div class="b3 chip" style="--x:4.5%;--y:78%;--w:9%;--h:13%;--z:16px"></div>
+            <div class="cap" style="--x:16%;--y:66%"></div><div class="cap" style="--x:22%;--y:66%"></div><div class="cap" style="--x:16%;--y:78%"></div>
+            <div class="led3 pwr" style="--x:22.5%;--y:88%"></div><div class="led3 run" style="--x:27%;--y:88%"></div><div class="led3 blk" style="--x:31.5%;--y:88%"></div>
+          </div>
+          <div class="shadow3d"></div>
+        </div>
+        <div class="powerbar"><button type="button" class="sw big" id="pwr" role="switch" aria-checked="false" aria-label="Power on the board"><span class="sw-led" aria-hidden="true"></span><span class="sw-track" aria-hidden="true"><span class="sw-knob"></span></span><span class="sw-txt" aria-hidden="true"><b class="t-off">OFF</b><b class="t-on">ON</b></span></button><span class="phint" id="phint">SW1 POWER: flip to boot</span></div>
+      </div>
+      <div class="h3text">
+        <div class="pprompt" id="pprompt"><p class="label">SW1 / POWER</p><p class="ptitle">The board is off.</p><p class="psub">Flip the power switch to boot my portfolio.</p></div>
+        <p class="hello">Hi, my name is</p>
+        <h1 id="name" data-wait="power" aria-label="Kiran.">Kiran<span class="dot">.</span></h1>
+        <p class="rolebox"><span class="pre">I build </span><span class="rw" id="rw"></span><span class="caret" aria-hidden="true"></span></p>
+        <p class="lede">Embedded firmware engineer and ECE Master's student at Northeastern University, Seattle. I write the low-level code that makes controller boards work.</p>
+        <div class="cta"><a class="btn primary" href="#projects">View my work</a><a class="btn" href="#contact">Get in touch</a></div>
+      </div>
+    </div>
+    <div class="downcue"><a href="#about">explore the portfolio <i aria-hidden="true"></i></a></div>
+  </header>
+
+  <section id="about" data-collapse="About"><div class="wrap">
+    <p class="label reveal">01 / About</p>
+    <h2 class="reveal d1">Close to the hardware, by choice.</h2>
+    <div class="about">
+      <div class="reveal d2"><p>I started in <b>electrical engineering</b>, which is why I like working where the code meets the board.</p><p>At Probots Electronics I wrote <b>multi-threaded C firmware</b> for a customized dual-core STM32 controller board running Bitmain mining hardware, brought up its buses, and developed <b>Linux kernel drivers</b>.</p><p>At Northeastern I built <b>multi-robot navigation on TurtleBot4</b>, with the robots linked over a TCP domain bridge. I'm finishing my M.S. in Electrical and Computer Engineering and looking for embedded firmware internships.</p></div>
+      <div class="stats reveal d3"><div class="stat"><b data-count="4.0" data-suf="">0</b><span>GPA at Northeastern</span></div><div class="stat"><b data-count="1" data-suf="">0</b><span>IEEE conference paper</span></div></div>
+    </div>
+  </div></section>
+
+  <section id="experience" data-collapse="Experience"><div class="wrap">
+    <p class="label reveal">02 / Experience</p>
+    <h2 class="reveal d1">Where I've worked</h2>
+    <div class="tl" id="tl"><div class="fill" id="tlfill"></div><div class="job reveal"><h3>Embedded Engineer</h3><p class="co">Probots Electronics India Pvt. Ltd. · Full-time</p><ul><li>Developed firmware in C on a customized STM32-based controller board for Bitmain mining hardware.</li><li>Built on a multi-threaded RTOS architecture across dual-core STM32 microcontrollers.</li><li>Built block-found detection and notification logic, and improved hashrate and frequency autotuning.</li><li>Tested electrical amplifiers over I2C, SPI, and USB; worked with Ethernet and TCP/IP in firmware.</li><li>Developed Linux kernel drivers and modules; compiled with GCC/ARM-GCC and Makefile-based builds.</li><li>Ran efficiency benchmarking across multiple miner models.</li></ul></div><div class="job reveal"><h3>Electrical Engineering Intern</h3><p class="co">KPTCL, Karnataka Power Transmission Corporation Limited</p><ul><li>Hands-on exposure to power transmission infrastructure.</li></ul></div></div>
+  </div></section>
+
+  <section id="projects" data-collapse="Projects"><div class="wrap">
+    <p class="label reveal">03 / Projects</p>
+    <h2 class="reveal d1">Things I've built</h2>
+    <div class="projects"><article class="proj reveal d1"><div class="art" aria-hidden="true"><svg viewBox="0 0 400 190"><g fill="none" stroke-width="2">
+<path class="s-mu" d="M40 60 H150 M40 95 H150 M40 130 H150 M250 60 H360 M250 95 H360 M250 130 H360" opacity=".5"/>
+<path class="s-a1 dash" d="M40 60 H150 M250 95 H360 M40 130 H150"/><path class="s-a2 dash" d="M40 95 H150 M250 60 H360 M250 130 H360" style="animation-direction:reverse"/></g>
+<rect x="150" y="35" width="100" height="120" rx="10" class="f-bg" stroke="var(--a1)" stroke-width="2"/>
+<text x="200" y="92" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="15" fill="var(--ink)">STM32</text>
+<rect x="168" y="108" width="28" height="12" rx="3" class="f-a1 pulse"/><rect x="204" y="108" width="28" height="12" rx="3" class="f-a2 pulse" style="animation-delay:.6s"/>
+<text x="200" y="140" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--muted)">CORE 0   CORE 1</text></svg></div><div class="pbody"><h3>Mining controller firmware</h3><p>Multi-threaded C firmware for a dual-core STM32 controller board: block-found detection and notification, plus hashrate and frequency autotuning.</p><div class="tags"><span>C</span><span>STM32</span><span>RTOS</span><span>Dual-core</span></div></div></article><article class="proj reveal d2"><div class="art" aria-hidden="true"><svg viewBox="0 0 400 190"><g font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)"><text x="18" y="56">SCL</text><text x="18" y="106">SDA</text><text x="18" y="156">SPI</text></g>
+<svg x="56" y="0" width="344" height="190" overflow="hidden"><g transform="translate(-56,0)"><g class="scrollx"><path class="s-a1" fill="none" stroke-width="2" d="M60 60 h20 v-18 h20 v18 h20 v-18 h20 v18 h20 v-18 h20 v18 h20 v-18 h20 v18 h20 v-18 h20 v18 h20 v-18 h20 v18 h20 v-18 h20 v18 h20 v-18 h20 v18 h20 v-18 h20 v18 h20 v-18 h20 v18 h20 v-18 h20 v18 h20"/>
+<path class="s-a2" fill="none" stroke-width="2" d="M60 110 h40 v-18 h60 v18 h20 v-18 h40 v18 h40 v-18 h20 v18 h40 v-18 h60 v18 h20 v-18 h40 v18 h40 v-18 h20 v18 h40"/>
+<path class="s-mu" fill="none" stroke-width="2" d="M60 160 h20 v-18 h40 v18 h20 v-18 h20 v18 h60 v-18 h20 v18 h40 v-18 h20 v18 h40 v-18 h40 v18 h20 v-18 h40 v18 h60"/></g></g></svg></svg></div><div class="pbody"><h3>Hardware bring-up and validation</h3><p>Electrical amplifier testing over I2C, SPI, and USB, and efficiency benchmarking across multiple miner models.</p><div class="tags"><span>I2C</span><span>SPI</span><span>USB</span><span>Benchmarking</span></div></div></article><article class="proj reveal d1"><div class="art" aria-hidden="true"><svg viewBox="0 0 400 190"><g transform="translate(110,60)" fill="none" stroke-width="2.4">
+<path class="s-mu" d="M0 0 L-18 95 M0 0 L18 95 M-12 60 L12 60 M-7 30 L7 30"/>
+<path class="s-a1 arcp" d="M14 -8 A18 18 0 0 1 14 18"/><path class="s-a1 arcp" style="animation-delay:.25s" d="M24 -18 A32 32 0 0 1 24 28"/><path class="s-a1 arcp" style="animation-delay:.5s" d="M34 -28 A46 46 0 0 1 34 38"/>
+<path class="s-a1 arcp" d="M-14 -8 A18 18 0 0 0 -14 18"/><path class="s-a1 arcp" style="animation-delay:.25s" d="M-24 -18 A32 32 0 0 0 -24 28"/><path class="s-a1 arcp" style="animation-delay:.5s" d="M-34 -28 A46 46 0 0 0 -34 38"/></g>
+<path class="s-a2 dash" fill="none" stroke-width="2" d="M160 95 H240"/><rect x="240" y="70" width="50" height="50" rx="8" fill="none" stroke="var(--muted)" stroke-width="2"/>
+<path class="s-a2 dash" fill="none" stroke-width="2" d="M290 95 H320 V112"/><circle cx="320" cy="128" r="16" class="f-a1 pulse"/></svg></div><div class="pbody"><span class="where">B.E. project, BMSIT&amp;M</span><span class="badge">IEEE conference paper</span><h3>GSM remote load switching and energy monitoring</h3><p>Switches electrical loads and reports energy consumption remotely over the GSM network. Presented at a department seminar.</p><div class="tags"><span>GSM</span><span>Energy monitoring</span></div></div></article><article class="proj reveal d2"><div class="art" aria-hidden="true"><svg viewBox="0 0 400 190"><g stroke="var(--line)" stroke-width="1"><path d="M0 0 V190"/><path d="M25 0 V190"/><path d="M50 0 V190"/><path d="M75 0 V190"/><path d="M100 0 V190"/><path d="M125 0 V190"/><path d="M150 0 V190"/><path d="M175 0 V190"/><path d="M200 0 V190"/><path d="M225 0 V190"/><path d="M250 0 V190"/><path d="M275 0 V190"/><path d="M300 0 V190"/><path d="M325 0 V190"/><path d="M350 0 V190"/><path d="M375 0 V190"/><path d="M400 0 V190"/><path d="M0 0 H400"/><path d="M0 25 H400"/><path d="M0 50 H400"/><path d="M0 75 H400"/><path d="M0 100 H400"/><path d="M0 125 H400"/><path d="M0 150 H400"/><path d="M0 175 H400"/></g>
+<g class="f-mu" opacity=".35"><rect x="150" y="50" width="25" height="75"/><rect x="250" y="100" width="25" height="75"/><rect x="75" y="125" width="50" height="25"/></g>
+<path class="s-a1 drawp" fill="none" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" d="M37 162 L62 112 L137 37 L212 37 L237 62 L237 87 L287 87 L362 37"/>
+<circle cx="37" cy="162" r="8" class="f-a2"/><circle cx="362" cy="37" r="9" fill="none" stroke="var(--a2)" stroke-width="3" class="pulse"/></svg></div><div class="pbody"><span class="where">M.S. project, Northeastern University</span><h3>Multi-robot leader–follower navigation</h3><p>Two TurtleBot4 robots: a follower tracks a leader using custom A* and SMAC Hybrid-A* planners with DWA and MPPI controllers. A TCP domain bridge links the robots' ROS2 domains.</p><div class="tags"><span>TurtleBot4</span><span>ROS2</span><span>TCP/IP</span><span>A*</span><span>DWA</span><span>MPPI</span></div></div></article><article class="proj reveal d1"><div class="art" aria-hidden="true"><svg viewBox="0 0 400 190"><rect x="60" y="28" width="280" height="134" rx="12" class="f-bg" stroke="var(--line)"/><circle cx="80" cy="44" r="4" fill="#FF5F57"/><circle cx="94" cy="44" r="4" fill="#FEBC2E"/><circle cx="108" cy="44" r="4" fill="#28C840"/>
+<g font-family="IBM Plex Mono, monospace" font-size="12"><text x="78" y="76" fill="var(--a1)">$ insmod board_drv.ko</text><text x="78" y="98" fill="var(--muted)" class="typeline">[ ok ] driver registered</text><text x="78" y="120" fill="var(--muted)">[ ok ] /dev/board0 ready</text>
+<rect x="78" y="132" width="9" height="15" class="f-a2 blinkf"/></g></svg></div><div class="pbody"><h3>Linux kernel drivers</h3><p>Kernel driver and module development for the controller hardware, built with the GCC/ARM-GCC toolchain and Makefiles.</p><div class="tags"><span>Linux kernel</span><span>ARM-GCC</span><span>Makefile</span></div></div></article></div>
+  </div></section>
+
+  <section id="skills" data-collapse="Skills" style="padding-left:0;padding-right:0">
+    <div class="wrap"><p class="label reveal">04 / Skills</p><h2 class="reveal d1">My toolkit</h2></div>
+    <div class="marquee reveal"><div class="track"><span><i>✦</i>C</span><span><i>✦</i>STM32</span><span><i>✦</i>Dual-core MCUs</span><span><i>✦</i>RTOS</span><span><i>✦</i>Multi-threading</span><span><i>✦</i>I2C</span><span><i>✦</i>SPI</span><span><i>✦</i>USB</span></div></div>
+    <div class="marquee rev reveal"><div class="track"><span><i>✦</i>Ethernet</span><span><i>✦</i>TCP/IP</span><span><i>✦</i>GSM</span><span><i>✦</i>Linux kernel drivers</span><span><i>✦</i>GCC / ARM-GCC</span><span><i>✦</i>Makefile</span><span><i>✦</i>TurtleBot4</span><span><i>✦</i>ROS2</span><span><i>✦</i>Hardware validation</span></div></div>
+  </section>
+
+  <section id="education" data-collapse="Education"><div class="wrap">
+    <p class="label reveal">05 / Education</p>
+    <h2 class="reveal d1">Background</h2>
+    <div class="edu"><div class="ecard reveal d1"><h3>M.S. Electrical and Computer Engineering</h3><p>Northeastern University, Seattle. GPA 4.0.<br><br><b>Project:</b> multi-robot TurtleBot4 leader–follower navigation in ROS2.</p></div><div class="ecard reveal d2"><h3>B.E. Electrical Engineering</h3><p>BMSIT&amp;M, Bengaluru. Networking coursework: TCP/IP, routing, bridging.<br><br><b>Project:</b> GSM-based remote load switching and energy monitoring, published as an IEEE conference paper.</p></div><div class="ecard reveal d3"><h3>Leadership</h3><p>Organized the college fest and sports meet, refereed sports events, and volunteered across college-wide events.</p></div></div>
+  </div></section>
+
+  <section id="contact" class="contact"><div class="wrap">
+    <p class="label reveal">06 / Contact</p>
+    <h2 class="reveal d1">Let's talk <span class="wave">👋</span></h2>
+    <p class="reveal d2">I'm looking for embedded firmware internships while I finish my Master's, then a full-time embedded role after graduation.</p>
+    <div class="cta reveal d3"><a class="btn primary" href="mailto:you@example.com" target="_blank" rel="noopener">Say hello</a><a class="btn" href="https://www.linkedin.com/" target="_blank" rel="noopener">LinkedIn</a><a class="btn" href="https://github.com/kirankv10" target="_blank" rel="noopener">GitHub</a></div>
+  </div></section>
+</main>
+<footer><div class="wrap"><span>Kiran, Seattle, WA</span><span>Embedded firmware engineer</span></div></footer>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement, reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function css(v) { return getComputedStyle(root).getPropertyValue(v).trim(); }
+  try { var t = localStorage.getItem("theme"); if (t) root.setAttribute("data-theme", t); } catch (e) {}
+  document.getElementById("themeBtn").addEventListener("click", function () {
+    var cur = root.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    var n = cur === "dark" ? "light" : "dark"; root.setAttribute("data-theme", n); try { localStorage.setItem("theme", n); } catch (e) {}
+  });
+
+  /* Name letters + rotating roles */
+  var nm = document.getElementById("name"), roles = ["STM32 firmware in C.", "multi-threaded RTOS systems.", "I2C, SPI, USB, and Ethernet links.", "multi-robot TurtleBot4 systems.", "Linux kernel drivers."], rw = document.getElementById("rw");
+  function startHero(base) {
+    var txt = "Kiran", html = "";
+    for (var i = 0; i < txt.length; i++) html += '<span class="ch" aria-hidden="true" style="animation-delay:' + (base + i * .07) + 's">' + txt[i] + '</span>';
+    nm.innerHTML = html + '<span class="ch dot" aria-hidden="true" style="animation-delay:' + (base + txt.length * .07) + 's">.</span>';
+    var ri = 0, ci = 0, del = false;
+    if (reduce) { rw.textContent = roles[0]; return; }
+    setTimeout(function type() {
+      var w = roles[ri];
+      if (!del) { ci++; rw.textContent = w.slice(0, ci); if (ci === w.length) { del = true; return setTimeout(type, 1700); } }
+      else { ci--; rw.textContent = w.slice(0, ci); if (ci === 0) { del = false; ri = (ri + 1) % roles.length; } }
+      setTimeout(type, del ? 35 : 70);
+    }, (base + .6) * 1000);
+  }
+  if (!nm.dataset.wait) startHero(parseFloat(nm.dataset.delay || ".2"));
+
+  /* Skills marquee duplication for seamless loop */
+  document.querySelectorAll(".track").forEach(function (t) { t.innerHTML += t.innerHTML; t.querySelectorAll("span").forEach(function (s, i) { if (i >= t.children.length / 2) s.setAttribute("aria-hidden", "true"); }); });
+
+  /* Collapsible sections with toggle switches */
+  var openSection = function () {};
+  if (document.body.classList.contains("collapsible")) {
+    var secs = document.querySelectorAll("section[data-collapse]");
+    secs.forEach(function (sec) {
+      var h2 = sec.querySelector("h2"), hp = h2.parentElement, name = sec.dataset.collapse;
+      var body = document.createElement("div"), inner = document.createElement("div"); body.className = "sec-body"; inner.className = "inner"; body.appendChild(inner); body.id = sec.id + "-body";
+      var after = [], n = h2.nextSibling; while (n) { after.push(n); n = n.nextSibling; }
+      var hasAfter = after.some(function (x) { return x.nodeType === 1; });
+      if (hasAfter) { after.forEach(function (x) { inner.appendChild(x); }); hp.appendChild(body); }
+      else { var m = hp.nextSibling; var list = []; while (m) { list.push(m); m = m.nextSibling; } list.forEach(function (x) { inner.appendChild(x); }); sec.appendChild(body); }
+      var head = document.createElement("div"); head.className = "sechead";
+      h2.parentNode.insertBefore(head, h2); head.appendChild(h2);
+      var sw = document.createElement("button"); sw.type = "button"; sw.className = "sw"; sw.setAttribute("role", "switch"); sw.setAttribute("aria-checked", "false"); sw.setAttribute("aria-controls", body.id); sw.setAttribute("aria-label", "Show " + name);
+      sw.innerHTML = '<span class="sw-led" aria-hidden="true"></span><span class="sw-track" aria-hidden="true"><span class="sw-knob"></span></span><span class="sw-txt" aria-hidden="true"><b class="t-off">OFF</b><b class="t-on">ON</b></span>';
+      head.appendChild(sw);
+      function set(on) { sec.classList.toggle("open", on); sw.setAttribute("aria-checked", on ? "true" : "false"); sw.setAttribute("aria-label", (on ? "Hide " : "Show ") + name);
+        if (on) inner.querySelectorAll(".reveal").forEach(function (r) { r.classList.add("in"); }); }
+      sw.addEventListener("click", function () { set(!sec.classList.contains("open")); });
+      h2.addEventListener("click", function () { set(!sec.classList.contains("open")); });
+      sec._set = set;
+    });
+    openSection = function (id) { var sec = document.getElementById(id); if (sec && sec._set) sec._set(true); };
+    document.querySelectorAll('a[href^="#"]').forEach(function (a) { a.addEventListener("click", function () { openSection(a.getAttribute("href").slice(1)); }); });
+  }
+
+  /* Reveal on scroll */
+  var rv = document.querySelectorAll(".reveal");
+  if (reduce || !("IntersectionObserver" in window)) rv.forEach(function (e) { e.classList.add("in"); });
+  else { var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }); }, { threshold: .12 }); rv.forEach(function (e) { io.observe(e); }); }
+
+  /* Counters */
+  document.querySelectorAll("[data-count]").forEach(function (el) {
+    var end = parseFloat(el.dataset.count), dec = (el.dataset.count.split(".")[1] || "").length, suf = el.dataset.suf || "";
+    if (reduce) { el.textContent = end.toFixed(dec) + suf; return; }
+    var o = new IntersectionObserver(function (es) { if (!es[0].isIntersecting) return; o.disconnect(); var t0 = performance.now();
+      (function f(now) { var p = Math.min(1, (now - t0) / 1400), e = 1 - Math.pow(1 - p, 3); el.textContent = (end * e).toFixed(dec) + suf; if (p < 1) requestAnimationFrame(f); })(t0); });
+    o.observe(el);
+  });
+
+  /* Card tilt + spotlight */
+  if (!reduce && matchMedia("(hover: hover)").matches) document.querySelectorAll(".proj").forEach(function (c) {
+    c.addEventListener("pointermove", function (e) { var r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+      c.style.transform = "perspective(900px) rotateX(" + ((.5 - y) * 6) + "deg) rotateY(" + ((x - .5) * 8) + "deg) translateY(-4px)";
+      c.style.setProperty("--mx", x * 100 + "%"); c.style.setProperty("--my", y * 100 + "%"); });
+    c.addEventListener("pointerleave", function () { c.style.transform = ""; });
+  });
+
+  /* Nav, progress, timeline fill, cursor glow */
+  var nav = document.getElementById("nav"), prog = document.getElementById("progress"), tl = document.getElementById("tl"), fill = document.getElementById("tlfill"), links = document.querySelectorAll("nav.top a.l");
+  function onScroll() {
+    var y = scrollY, h = document.documentElement.scrollHeight - innerHeight;
+    nav.classList.toggle("solid", y > 30); prog.style.width = (h > 0 ? y / h * 100 : 0) + "%";
+    var r = tl.getBoundingClientRect(), p = Math.max(0, Math.min(1, (innerHeight * .7 - r.top) / r.height)); fill.style.height = (p * (r.height - 12)) + "px";
+    var cur = ""; document.querySelectorAll("section[id]").forEach(function (s) { if (s.offsetParent && s.getBoundingClientRect().top < innerHeight * .4) cur = s.id; });
+    links.forEach(function (a) { a.classList.toggle("on", a.getAttribute("href") === "#" + cur); });
+  }
+  addEventListener("scroll", onScroll, { passive: true }); onScroll();
+  var glow = document.getElementById("glow");
+  if (!reduce) addEventListener("pointermove", function (e) { glow.style.left = e.clientX + "px"; glow.style.top = e.clientY + "px"; });
+
+  
+  /* ===== 3D board power-on ===== */
+  (function () {
+    var hero = document.getElementById("hero3d"), tilt = document.getElementById("tilt"), scr = document.getElementById("scr"), NS = "http://www.w3.org/2000/svg";
+    var tr = document.getElementById("tr3"), pins = document.getElementById("mcupins");
+    var paths = ["M110 430 H200 V340 H330", "M110 445 H215 V355 H330",
+      "M170 110 H250 V210 H330", "M170 130 H240 V225 H330", "M170 150 H230 V240 H330",
+      "M345 70 V170", "M365 70 V170", "M385 70 V170", "M405 70 V170", "M425 70 V170",
+      "M470 200 H500 V120 H520", "M470 215 H510 V135 H520",
+      "M470 255 H720", "M470 272 H600 V340 H720", "M470 289 H585 V420 H720",
+      "M380 310 V370", "M400 310 V370", "M420 310 V370", "M330 300 H300 V430 H252"];
+    paths.forEach(function (d, i) {
+      ["base", "flow"].forEach(function (k) { var p = document.createElementNS(NS, "path"); p.setAttribute("d", d); p.setAttribute("pathLength", "1"); p.setAttribute("class", k);
+        if (k === "base") p.style.transitionDelay = (i * .05) + "s"; else { p.style.animationDelay = (-Math.random() * 2.2) + "s"; p.style.animationDuration = (1.6 + Math.random() * 1.4) + "s"; } tr.appendChild(p); });
+    });
+    for (var i = 0; i < 12; i++) { var o = 338 + i * 11;
+      [[o, 160, 4, 10], [o, 310, 4, 10], [320, 180 + i * 10.5, 10, 4], [470, 180 + i * 10.5, 10, 4]].forEach(function (r) { var e = document.createElementNS(NS, "rect"); e.setAttribute("x", r[0]); e.setAttribute("y", r[1]); e.setAttribute("width", r[2]); e.setAttribute("height", r[3]); pins.appendChild(e); }); }
+
+    var timers = [], started = false, pwrBtn = document.getElementById("pwr"), hint = document.getElementById("phint"), powered = false;
+    function at(ms, fn) { timers.push(setTimeout(fn, ms)); }
+    function type(el, text, speed, done) { var i = 0; (function t() { el.textContent = text.slice(0, ++i); if (i < text.length) timers.push(setTimeout(t, speed)); else if (done) done(); })(); }
+    function ready() { document.body.classList.add("powered"); setTimeout(onScroll, 50); if (!hero.classList.contains("ready")) { hero.classList.add("ready"); if (!started) { started = true; startHero(.15); } } }
+    function bootScreen() {
+      scr.innerHTML = "";
+      var lines = ["BOOT v2026", "CORE0 .... OK", "CORE1 .... OK", "RTOS ..... GO", "ETH ...... UP"], k = 0;
+      (function next() {
+        if (k < lines.length) { var d = document.createElement("div"); scr.appendChild(d); type(d, lines[k++], 16, function () { timers.push(setTimeout(next, 80)); }); }
+        else timers.push(setTimeout(function () {
+          scr.innerHTML = '<div id="l1"></div><div class="big2" id="l2"></div>';
+          type(document.getElementById("l1"), "> welcome to my", 40, function () {
+            timers.push(setTimeout(function () { type(document.getElementById("l2"), "PORTFOLIO", 75, function () { document.getElementById("l2").insertAdjacentHTML("beforeend", '<span class="cur"></span>'); ready(); }); }, 150));
+          });
+        }, 300));
+      })();
+    }
+    function powerOn() {
+      timers.forEach(clearTimeout); timers = []; powered = true;
+      pwrBtn.setAttribute("aria-checked", "true"); pwrBtn.setAttribute("aria-label", "Power off the board"); hint.textContent = "Board is on";
+      if (reduce) { hero.classList.add("pwr-on", "tr-on", "mcu-on", "eth-on", "oled-on"); scr.innerHTML = '<div>&gt; welcome to my</div><div class="big2">PORTFOLIO</div>'; ready(); return; }
+      hero.classList.add("pwr-on");
+      at(250, function () { hero.classList.add("tr-on"); });
+      at(800, function () { hero.classList.add("mcu-on", "eth-on"); });
+      at(1050, function () { hero.classList.add("oled-on"); bootScreen(); });
+      at(5200, ready);
+    }
+    function powerOff() {
+      timers.forEach(clearTimeout); timers = []; powered = false;
+      hero.classList.remove("pwr-on", "tr-on", "mcu-on", "eth-on", "oled-on", "ready"); document.body.classList.remove("powered"); setTimeout(onScroll, 50); scr.innerHTML = "";
+      pwrBtn.setAttribute("aria-checked", "false"); pwrBtn.setAttribute("aria-label", "Power on the board"); hint.textContent = "SW1 POWER: flip to boot";
+    }
+    function toggle() { powered ? powerOff() : powerOn(); }
+    pwrBtn.addEventListener("click", toggle);
+    document.getElementById("pcb3d").addEventListener("click", toggle);
+    setTimeout(function () { hero.classList.add("on"); }, reduce ? 0 : 150);
+
+    /* mouse tilt + float */
+    var tx = 0, ty = 0, cx = 0, cy = 0, t0 = performance.now();
+    hero.addEventListener("pointermove", function (e) { var r = hero.getBoundingClientRect(); tx = ((e.clientX - r.left) / r.width - .5) * 2; ty = ((e.clientY - r.top) / r.height - .5) * 2; });
+    hero.addEventListener("pointerleave", function () { tx = ty = 0; });
+    if (!reduce) (function loop(now) {
+      cx += (tx - cx) * .06; cy += (ty - cy) * .06; var f = Math.sin((now - t0) / 1400) * 6;
+      tilt.style.transform = "translateZ(" + f.toFixed(1) + "px) rotateX(" + (34 - cy * 10).toFixed(2) + "deg) rotateY(" + (cx * 10).toFixed(2) + "deg) rotateZ(" + (-12 + cx * 4).toFixed(2) + "deg)";
+      requestAnimationFrame(loop);
+    })(t0);
+    /* occasional block-found LED */
+    var blk = hero.querySelector(".led3.blk");
+    setInterval(function () { if (!hero.classList.contains("mcu-on")) return; blk.classList.add("fire"); setTimeout(function () { blk.classList.remove("fire"); }, 400); }, 6500);
+  })();
+
+  /* Background */
+  
+  var cv = document.getElementById("bgfx"), ctx = cv.getContext("2d"), paths = [], pulses = [], W, H;
+  function build() {
+    var dpr = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    paths = []; pulses = []; var g = 32, n = Math.round(W * H / 30000);
+    for (var k = 0; k < n; k++) {
+      var x = Math.round(Math.random() * W / g) * g, y = Math.round(Math.random() * H / g) * g, pts = [[x, y]], dir = Math.floor(Math.random() * 4), s = 2 + Math.floor(Math.random() * 4);
+      for (var q = 0; q < s; q++) { var l = g * (2 + Math.floor(Math.random() * 5)); if (dir === 0) x += l; else if (dir === 1) y += l; else if (dir === 2) x -= l; else y -= l; pts.push([x, y]); dir = (dir + (Math.random() > .5 ? 1 : 3)) % 4; }
+      var tot = 0; for (q = 1; q < pts.length; q++) tot += Math.abs(pts[q][0] - pts[q-1][0]) + Math.abs(pts[q][1] - pts[q-1][1]);
+      paths.push({ pts: pts, len: tot }); if (Math.random() > .5) pulses.push({ p: paths.length - 1, t: Math.random(), v: .001 + Math.random() * .002 });
+    }
+  }
+  function pOn(pp, f) { var d = f * pp.len, pts = pp.pts; for (var q = 1; q < pts.length; q++) { var sl = Math.abs(pts[q][0] - pts[q-1][0]) + Math.abs(pts[q][1] - pts[q-1][1]); if (d <= sl) { var r = sl ? d / sl : 0; return [pts[q-1][0] + (pts[q][0] - pts[q-1][0]) * r, pts[q-1][1] + (pts[q][1] - pts[q-1][1]) * r]; } d -= sl; } return pts[pts.length - 1]; }
+  function draw() {
+    ctx.clearRect(0, 0, W, H); var line = css("--line"), a1 = css("--a1");
+    ctx.strokeStyle = line; ctx.fillStyle = line; ctx.lineWidth = 1.4;
+    paths.forEach(function (pp) { ctx.beginPath(); pp.pts.forEach(function (p, i) { i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); }); ctx.stroke(); var e = pp.pts[pp.pts.length - 1]; ctx.beginPath(); ctx.arc(e[0], e[1], 3, 0, 7); ctx.fill(); });
+    ctx.fillStyle = a1; ctx.shadowColor = a1; ctx.shadowBlur = 8;
+    pulses.forEach(function (u) { var p = pOn(paths[u.p], u.t); ctx.globalAlpha = .7; ctx.beginPath(); ctx.arc(p[0], p[1], 2.2, 0, 7); ctx.fill(); });
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+  }
+  function frame() { pulses.forEach(function (u) { u.t += u.v; if (u.t > 1) u.t = 0; }); draw(); requestAnimationFrame(frame); }
+  build(); addEventListener("resize", function () { build(); draw(); });
+  if (reduce) draw(); else requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
